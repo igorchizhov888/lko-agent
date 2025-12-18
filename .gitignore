@@ -38,3 +38,4 @@ llama.cpp/build/
 # Keep model but ignore other large files
 *.bin
 !*.gguf
+agent/memory/metadata.pkl
