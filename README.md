@@ -160,5 +160,4 @@ This is a production-oriented architecture, not a demo. The agent:
 - Handles errors gracefully
 - Provides clear, actionable output
 
-**Author**: Built step-by-step with Claude
-**Date**: December 2025
+
