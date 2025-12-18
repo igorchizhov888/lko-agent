@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent specific
+agent/logs/*.log
+agent/logs/*.jsonl
+agent/memory/*.db
+agent/memory/*.index
+
+# Temporary files
+*.tmp
+=0.17.1
+
+# llama.cpp build artifacts
+llama.cpp/llama.cpp/build/
+llama.cpp/build/
+
+# Keep model but ignore other large files
+*.bin
+!*.gguf
