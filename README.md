@@ -1,7 +1,7 @@
 # Local Knowledge & Operations Assistant (LKO Agent)
 
 ## Overview
-A local, autonomous agent that uses Phi-3 Mini (3.8B) via llama.cpp to perform intelligent system diagnostics through natural language queries. **Now with institutional memory** - the agent learns from every interaction and builds operational knowledge over time.
+A local, autonomous agent that uses Phi-3 Mini (3.8B) via llama.cpp to perform intelligent system diagnostics through natural language queries. Features **institutional memory** that learns from every interaction and **intelligent resource management** with graceful remediation.
 
 ## Current Capabilities
 
@@ -14,7 +14,7 @@ A local, autonomous agent that uses Phi-3 Mini (3.8B) via llama.cpp to perform i
   - Memory status checking
   - Process list inspection
   - Recent error log analysis
-- **Safe Execution**: Dry-run mode and logging
+- **Safe Execution**: Dry-run mode and comprehensive logging
 - **CLI Interface**: Simple command-line interaction
 
 ### ✅ Phase 2: Memory & RAG (Complete)
@@ -25,6 +25,16 @@ A local, autonomous agent that uses Phi-3 Mini (3.8B) via llama.cpp to perform i
 - **Operational Statistics**: View tool usage, outcomes, and trends
 - **Institutional Knowledge**: Agent learns from your specific system over time
 
+### ✅ Phase 3: Intelligent Resource Management (Complete)
+- **Resource Monitoring**: Detect CPU/memory hogs automatically
+- **Smart Remediation**: Three-tier escalation strategy
+  1. **Renice** (gentle): Reduce process priority first
+  2. **Graceful Stop** (SIGTERM): Allow clean shutdown
+  3. **Force Kill** (SIGKILL): Last resort only
+- **Process Intelligence**: Wait and verify after each step
+- **Safety First**: All actions respect dry-run mode
+- **Remediation History**: Track all actions and outcomes
+
 ## Architecture
 ```
 agent/
@@ -33,9 +43,10 @@ agent/
 │   └── planner.py   # Query planning logic
 ├── executor/         # Safe tool execution
 │   └── executor.py  # Runs planned tools with safety checks
-├── tools/            # System monitoring capabilities
-│   └── system_tools.py
-├── memory/           # Memory & RAG system (NEW)
+├── tools/            # System monitoring and management
+│   ├── system_tools.py    # Monitoring tools
+│   └── resource_manager.py # Process management (NEW)
+├── memory/           # Memory & RAG system
 │   ├── embeddings.py      # Text-to-vector conversion
 │   ├── vector_store.py    # FAISS vector database
 │   └── incident_logger.py # Operational history tracking
@@ -82,41 +93,46 @@ python3 agent_cli.py search "memory issues"
 python3 agent_cli.py stats
 ```
 
-### Example Output
-```
-$ python3 agent_cli.py search "slow system"
-
-Searching past incidents for: slow system
-============================================================
-
-Result 1 (similarity: 54.9%):
-  Date: 2025-12-18T15:26:59
-  Query: Why is my system slow?
-  Goal: Identify causes of system slowness
-  Tools: memory_status, cpu_load, process_list
-  Outcome: success
+### Test All Phases
+```bash
+# Run comprehensive test suite
+python3 test_all_phases.py
 ```
 
-## How Memory Works
+## Intelligent Resource Management
 
-### Incident Recording
-Every query you ask is:
-1. Embedded as a 384-dimensional vector
-2. Stored in FAISS for semantic search
-3. Logged to JSONL with full details
-4. Available for future similarity searches
+### How It Works
 
-### Building Institutional Knowledge
-Over time, the agent:
-- **Recognizes patterns**: "This looks similar to an issue from last week..."
-- **Learns solutions**: Tracks which fixes worked vs. failed
-- **Identifies trends**: "Docker issues happen 2x/month on your system"
-- **Provides context**: "You resolved this before by running X"
+When a process consumes excessive resources:
 
-### Memory Files
-- `agent/memory/faiss.index` - Vector database (semantic search)
-- `agent/memory/metadata.pkl` - Incident metadata
-- `agent/logs/incidents.jsonl` - Full incident history
+**Step 1: Renice (Gentle)**
+- Increases process nice value (reduces priority)
+- Allows process to continue but with less CPU time
+- System remains responsive
+- Waits to see if behavior improves
+
+**Step 2: Graceful Stop (if renice didn't help)**
+- Sends SIGTERM signal
+- Process can clean up and save state
+- Waits 5 seconds for graceful shutdown
+
+**Step 3: Force Kill (last resort)**
+- Sends SIGKILL signal only if SIGTERM failed
+- Immediate termination
+- Used only when necessary
+
+### Example
+```python
+from agent.tools.resource_manager import ResourceManager
+
+manager = ResourceManager(dry_run=False)
+
+# Find resource hogs
+hogs = manager.find_resource_hogs(cpu_threshold=80, memory_threshold=50)
+
+# Smart remediation with escalation
+results = manager.smart_remediate(hogs[0]['pid'])
+```
 
 ## Configuration
 
@@ -126,14 +142,17 @@ Edit `agent/config.yaml`:
 memory:
   vector_store: "faiss"
   embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-  max_short_term: 10
-  sqlite_path: "./agent/memory/agent.db"
-  faiss_index_path: "./agent/memory/faiss.index"
 
 # Safety settings
 safety:
   dry_run: false          # Set to true to simulate actions
   log_all_actions: true
+
+# Resource management thresholds
+resource_management:
+  cpu_threshold: 80       # CPU % to consider problematic
+  memory_threshold: 50    # Memory % to consider problematic
+  renice_value: 19        # Nice value for deprioritization
 ```
 
 ## Technical Stack
@@ -143,57 +162,55 @@ safety:
 - **Model**: Phi-3 Mini 4K Instruct Q4 (2.4GB)
 - **Vector DB**: FAISS (CPU version)
 - **Embeddings**: sentence-transformers (all-MiniLM-L6-v2, 384d)
-- **Dependencies**: PyYAML, FAISS, sentence-transformers
+- **Process Management**: psutil
+- **Dependencies**: PyYAML, FAISS, sentence-transformers, psutil
 - **Platform**: Linux (Ubuntu 24)
 
 ## Roadmap
 
-### Phase 3: Automated Remediation (Next)
-- [ ] Restart services
-- [ ] Clean temp directories
-- [ ] Kill runaway processes
-- [ ] Policy-driven auto-actions
-
-### Phase 4: Autonomous Operation
-- [ ] Systemd service
-- [ ] Scheduled health checks
-- [ ] Anomaly detection
-- [ ] Proactive alerts
+### Phase 4: Autonomous Operation (Next)
+- [ ] Systemd service for background operation
+- [ ] Scheduled health checks (hourly/daily)
+- [ ] Proactive monitoring and alerts
+- [ ] Email/Slack notifications
+- [ ] Automatic log rotation and cleanup
 
 ### Phase 5: Advanced Features
-- [ ] Docker monitoring
-- [ ] Network diagnostics
-- [ ] Application-specific tools
+- [ ] Docker container monitoring
+- [ ] Network diagnostics tools
+- [ ] Application-specific plugins
 - [ ] Custom runbook integration
+- [ ] Multi-system monitoring
 
 ## Performance
 
 - **Model Load**: ~2-3 seconds (first query)
 - **Query Planning**: ~1-2 seconds
 - **Vector Search**: <100ms over 1000s of incidents
+- **Process Renice**: <50ms
 - **Total Response**: ~5-10 seconds typical
 - **Memory Usage**: ~2.8GB (model + embeddings)
 
+## Development Status
+
+**Current Version**: 0.3.0 (Phase 3 Complete)
+**Status**: ✅ Production-ready with intelligent resource management
+**Next Milestone**: Autonomous scheduling
+
 ## Files
 
-- `agent_cli.py` - Main CLI interface with memory integration
-- `agent/config.yaml` - Configuration
+- `agent_cli.py` - Main CLI interface with memory
+- `test_all_phases.py` - Comprehensive test suite
+- `agent/tools/resource_manager.py` - Resource management
 - `agent/memory/` - Memory & RAG system
-- `agent/logs/incidents.jsonl` - Operational history
 - `README.md` - This file
 - `BUILD_SUMMARY.md` - Implementation details
 - `SETUP.md` - Installation guide
 
-## Development Status
-
-**Current Version**: 0.2.0 (Phase 2 Complete)
-**Status**: ✅ Functional with institutional memory
-**Next Milestone**: Automated remediation
-
 ## Contributing
 
-This is a personal project demonstrating real agent architecture with memory capabilities.
+This is a demonstration project showcasing real agent architecture with memory and autonomous capabilities.
 
 ## License
 
-MIT License - See LICENSE file
+MIT License
