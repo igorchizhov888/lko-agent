@@ -1,11 +1,11 @@
 # Local Knowledge & Operations Assistant (LKO Agent)
 
 ## Overview
-A local, autonomous agent that continuously observes system activity, answers operational questions, automates diagnostics, and recommends actions using structured reasoning.
+A local, autonomous agent that uses Phi-3 Mini (3.8B) via llama.cpp to perform intelligent system diagnostics through natural language queries. **Now with institutional memory** - the agent learns from every interaction and builds operational knowledge over time.
 
 ## Current Capabilities
 
-### ✅ Implemented (MVP)
+### ✅ Phase 1: Core Agent (Complete)
 - **Natural Language Queries**: Ask questions in plain English
 - **Intelligent Planning**: LLM-based tool selection using Phi-3 Mini
 - **System Monitoring Tools**:
@@ -17,6 +17,14 @@ A local, autonomous agent that continuously observes system activity, answers op
 - **Safe Execution**: Dry-run mode and logging
 - **CLI Interface**: Simple command-line interaction
 
+### ✅ Phase 2: Memory & RAG (Complete)
+- **Vector Store**: FAISS-based semantic search over past incidents
+- **Incident Logging**: Every query, plan, and result is recorded
+- **Historical Search**: Find similar past problems and solutions
+- **Pattern Recognition**: Track recurring issues and preferred solutions
+- **Operational Statistics**: View tool usage, outcomes, and trends
+- **Institutional Knowledge**: Agent learns from your specific system over time
+
 ## Architecture
 ```
 agent/
@@ -27,137 +35,165 @@ agent/
 │   └── executor.py  # Runs planned tools with safety checks
 ├── tools/            # System monitoring capabilities
 │   └── system_tools.py
-├── memory/           # (Future: RAG and persistent memory)
-├── retriever/        # (Future: Knowledge base search)
-├── prompts/          # (Future: Prompt templates)
+├── memory/           # Memory & RAG system (NEW)
+│   ├── embeddings.py      # Text-to-vector conversion
+│   ├── vector_store.py    # FAISS vector database
+│   └── incident_logger.py # Operational history tracking
 ├── logs/             # Query and execution logs
+│   └── incidents.jsonl    # Full incident history
 └── config.yaml       # Configuration
 ```
 
 ## Installation
 
-### Prerequisites
-- Python 3.11+
-- llama.cpp compiled with Phi-3 model
-- Linux system (Ubuntu/Debian)
+See [SETUP.md](SETUP.md) for detailed installation instructions.
 
-### Setup
+**Quick setup:**
 ```bash
-# Already done in your setup:
-cd ~/myagent_cli
+git clone https://github.com/igorchizhov888/lko-agent.git
+cd lko-agent
+python3 -m venv venv
 source venv/bin/activate
-pip install pyyaml
+pip install -r requirements.txt
+# Then install llama.cpp and download Phi-3 model (see SETUP.md)
 ```
 
 ## Usage
 
-### Basic Queries
+### Ask Questions (with Memory)
 ```bash
-# Check disk usage
+# The agent checks past incidents and learns from each query
 python3 agent_cli.py ask "Why is my disk filling up?"
-
-# Monitor memory
 python3 agent_cli.py ask "What processes are using the most memory?"
-
-# System health check
 python3 agent_cli.py ask "Is my system healthy? Check everything."
-
-# CPU investigation
-python3 agent_cli.py ask "Why is my CPU usage high?"
-
-# Error investigation
-python3 agent_cli.py ask "Show me recent system errors"
 ```
+
+### Search Past Incidents
+```bash
+# Find how you solved similar problems before
+python3 agent_cli.py search "disk space"
+python3 agent_cli.py search "slow system"
+python3 agent_cli.py search "memory issues"
+```
+
+### View Statistics
+```bash
+# See operational history and patterns
+python3 agent_cli.py stats
+```
+
+### Example Output
+```
+$ python3 agent_cli.py search "slow system"
+
+Searching past incidents for: slow system
+============================================================
+
+Result 1 (similarity: 54.9%):
+  Date: 2025-12-18T15:26:59
+  Query: Why is my system slow?
+  Goal: Identify causes of system slowness
+  Tools: memory_status, cpu_load, process_list
+  Outcome: success
+```
+
+## How Memory Works
+
+### Incident Recording
+Every query you ask is:
+1. Embedded as a 384-dimensional vector
+2. Stored in FAISS for semantic search
+3. Logged to JSONL with full details
+4. Available for future similarity searches
+
+### Building Institutional Knowledge
+Over time, the agent:
+- **Recognizes patterns**: "This looks similar to an issue from last week..."
+- **Learns solutions**: Tracks which fixes worked vs. failed
+- **Identifies trends**: "Docker issues happen 2x/month on your system"
+- **Provides context**: "You resolved this before by running X"
+
+### Memory Files
+- `agent/memory/faiss.index` - Vector database (semantic search)
+- `agent/memory/metadata.pkl` - Incident metadata
+- `agent/logs/incidents.jsonl` - Full incident history
 
 ## Configuration
 
-Edit `agent/config.yaml` to customize:
+Edit `agent/config.yaml`:
 ```yaml
+# Memory settings
+memory:
+  vector_store: "faiss"
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  max_short_term: 10
+  sqlite_path: "./agent/memory/agent.db"
+  faiss_index_path: "./agent/memory/faiss.index"
+
 # Safety settings
 safety:
   dry_run: false          # Set to true to simulate actions
-  require_confirmation: true
   log_all_actions: true
-
-# LLM settings
-llm:
-  temperature: 0.1        # Lower = more deterministic
-  max_tokens: 512         # Response length limit
-  threads: 6              # CPU threads for inference
 ```
 
-## Next Steps (Roadmap)
+## Technical Stack
 
-### Phase 2: Memory & RAG
-- [ ] Vector store integration (FAISS)
-- [ ] Embed and index system logs
-- [ ] Query past incidents: "How did I fix this last time?"
-- [ ] Build institutional knowledge over time
+- **Language**: Python 3.12
+- **LLM Runtime**: llama.cpp (native binary)
+- **Model**: Phi-3 Mini 4K Instruct Q4 (2.4GB)
+- **Vector DB**: FAISS (CPU version)
+- **Embeddings**: sentence-transformers (all-MiniLM-L6-v2, 384d)
+- **Dependencies**: PyYAML, FAISS, sentence-transformers
+- **Platform**: Linux (Ubuntu 24)
 
-### Phase 3: Automated Remediation
+## Roadmap
+
+### Phase 3: Automated Remediation (Next)
 - [ ] Restart services
 - [ ] Clean temp directories
 - [ ] Kill runaway processes
 - [ ] Policy-driven auto-actions
 
 ### Phase 4: Autonomous Operation
-- [ ] Scheduled health checks (cron/systemd)
+- [ ] Systemd service
+- [ ] Scheduled health checks
 - [ ] Anomaly detection
 - [ ] Proactive alerts
-- [ ] Weekly summaries
 
 ### Phase 5: Advanced Features
-- [ ] Custom runbook integration
-- [ ] Docker/container monitoring
+- [ ] Docker monitoring
 - [ ] Network diagnostics
 - [ ] Application-specific tools
+- [ ] Custom runbook integration
 
-## Technical Details
+## Performance
 
-### Model
-- **Phi-3 Mini 4K Instruct** (Q4 quantization)
-- 3.8B parameters, ~2.4GB on disk
-- Runs locally via llama.cpp
-- Context window: 4096 tokens
-
-### Safety Features
-- Command timeout limits (30s default)
-- Output size restrictions (10KB default)
-- Tool allow-list enforcement
-- All actions logged to JSONL
-
-## Examples of Real Output
-
-**Query**: "Why is my disk filling up?"
-**Plan**: Use disk_usage and process_list tools
-**Result**: Shows filesystem usage and memory-consuming processes
-
-**Query**: "Is my system healthy?"
-**Plan**: Execute all 5 diagnostic tools
-**Result**: Comprehensive system health report
-
-## Development Status
-
-**Current Version**: 0.1.0 (MVP)
-**Status**: ✅ Functional for read-only system diagnostics
-**Next Milestone**: Add memory/RAG layer
+- **Model Load**: ~2-3 seconds (first query)
+- **Query Planning**: ~1-2 seconds
+- **Vector Search**: <100ms over 1000s of incidents
+- **Total Response**: ~5-10 seconds typical
+- **Memory Usage**: ~2.8GB (model + embeddings)
 
 ## Files
 
-- `agent_cli.py` - Main CLI interface
+- `agent_cli.py` - Main CLI interface with memory integration
 - `agent/config.yaml` - Configuration
-- `agent/planner/` - Intelligence layer
-- `agent/executor/` - Execution layer
-- `agent/tools/` - System tools
-- `agent/logs/` - Activity logs
+- `agent/memory/` - Memory & RAG system
+- `agent/logs/incidents.jsonl` - Operational history
+- `README.md` - This file
+- `BUILD_SUMMARY.md` - Implementation details
+- `SETUP.md` - Installation guide
 
-## Notes
+## Development Status
 
-This is a production-oriented architecture, not a demo. The agent:
-- Uses structured reasoning (plan → execute → results)
-- Enforces safety boundaries
-- Logs all activities
-- Handles errors gracefully
-- Provides clear, actionable output
+**Current Version**: 0.2.0 (Phase 2 Complete)
+**Status**: ✅ Functional with institutional memory
+**Next Milestone**: Automated remediation
 
+## Contributing
 
+This is a personal project demonstrating real agent architecture with memory capabilities.
+
+## License
+
+MIT License - See LICENSE file
