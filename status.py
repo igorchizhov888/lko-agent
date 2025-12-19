@@ -14,11 +14,10 @@ def show_status():
             config = yaml.safe_load(f)
         
         print("\nConfiguration:")
-        print(f"   Version: 0.3.0")
+        print(f"   Version: 0.4.0")
         print(f"   Mode: {config['agent']['mode']}")
         print(f"   Dry Run: {config['safety']['dry_run']}")
         print(f"   LLM: Phi-3 Mini (Q4)")
-        print(f"   Threads: {config['llm']['threads']}")
         
         print("\nPhase 1 - Core Agent: COMPLETE")
         print("   * Natural language system diagnostics")
@@ -35,23 +34,27 @@ def show_status():
         print("   * Renice -> Graceful -> Force kill")
         print("   * Process monitoring and control")
         
-        print("\nAvailable Commands:")
+        print("\nPhase 4 - Autonomous Operation: COMPLETE")
+        print("   * Systemd service with auto-restart")
+        print("   * Scheduled health checks (6 hours)")
+        print("   * Resource monitoring (5 minutes)")
+        print("   * Desktop alert notifications")
+        print("   * Automatic log rotation")
+        
+        print("\nDaemon Commands:")
+        print("   agent start   - Start autonomous monitoring")
+        print("   agent stop    - Stop daemon")
+        print("   agent status  - Check daemon status")
+        print("   agent restart - Restart daemon")
+        print("   agent logs    - View live logs")
+        
+        print("\nQuery Commands:")
         print("   agent ask \"your question\"")
         print("   agent search \"keyword\"")
         print("   agent stats")
-        print("   python3 test_all_phases.py")
-        
-        print("\nSystem Tools:")
-        for tool in config['tools']['allowed_tools']:
-            print(f"   * {tool}")
-        
-        print("\nNext Steps (Phase 4):")
-        print("   - Systemd service for autonomous operation")
-        print("   - Scheduled health checks")
-        print("   - Proactive monitoring and alerts")
         
         print("\n" + "="*70)
-        print("  Status: PRODUCTION READY - All 3 Phases Complete")
+        print("  Status: ALL 4 PHASES COMPLETE - PRODUCTION READY")
         print("="*70 + "\n")
     else:
         print("ERROR: Config not found. Run from project root.")
