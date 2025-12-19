@@ -13,6 +13,8 @@ from agent.planner.planner import AgentPlanner
 from agent.executor.executor import AgentExecutor
 from agent.memory.incident_logger import IncidentLogger
 from agent.tools.resource_manager import ResourceManager
+from agent.alerts import AlertSystem
+from agent.log_rotation import LogRotation
 import yaml
 
 
@@ -29,6 +31,8 @@ class AgentDaemon:
         self.executor = AgentExecutor(config_path)
         self.logger = IncidentLogger()
         self.resource_manager = ResourceManager(dry_run=False)
+        self.alerts = AlertSystem(config)
+        self.log_rotation = LogRotation(max_size_mb=100, max_age_days=30)
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self.handle_shutdown)
@@ -83,6 +87,8 @@ class AgentDaemon:
             print(f"[{self.timestamp()}] WARNING: Found {len(hogs)} resource-intensive processes")
             for proc in hogs[:3]:
                 print(f"  - PID {proc['pid']}: {proc['name']} - {', '.join(proc['reason'])}")
+                # Send alert for resource hog
+                self.alerts.alert_resource_hog(proc['pid'], proc['name'], ', '.join(proc['reason']))
             
             # Log as incident
             query = f"High resource usage detected: {len(hogs)} processes"
