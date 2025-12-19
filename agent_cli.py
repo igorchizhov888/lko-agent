@@ -144,7 +144,7 @@ Examples:
     )
     
     parser.add_argument("command", 
-                       choices=["ask", "search", "stats"], 
+                       choices=["ask", "search", "stats", "start", "stop", "status", "restart", "logs"], 
                        help="Command to execute")
     parser.add_argument("query", 
                        nargs='?',
@@ -168,6 +168,43 @@ Examples:
     
     elif args.command == "stats":
         agent.show_stats()
+    
+    elif args.command == "start":
+        import subprocess
+        print("Starting LKO Agent daemon...")
+        result = subprocess.run(["sudo", "systemctl", "start", "lko-agent"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✓ Daemon started successfully")
+            print("  Use 'agent logs' to view output")
+        else:
+            print(f"✗ Failed to start: {result.stderr}")
+    
+    elif args.command == "stop":
+        import subprocess
+        print("Stopping LKO Agent daemon...")
+        result = subprocess.run(["sudo", "systemctl", "stop", "lko-agent"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✓ Daemon stopped successfully")
+        else:
+            print(f"✗ Failed to stop: {result.stderr}")
+    
+    elif args.command == "restart":
+        import subprocess
+        print("Restarting LKO Agent daemon...")
+        result = subprocess.run(["sudo", "systemctl", "restart", "lko-agent"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✓ Daemon restarted successfully")
+        else:
+            print(f"✗ Failed to restart: {result.stderr}")
+    
+    elif args.command == "status":
+        import subprocess
+        subprocess.run(["sudo", "systemctl", "status", "lko-agent"])
+    
+    elif args.command == "logs":
+        import subprocess
+        print("Showing daemon logs (Ctrl+C to exit)...")
+        subprocess.run(["sudo", "journalctl", "-u", "lko-agent", "-f"])
 
 
 if __name__ == "__main__":

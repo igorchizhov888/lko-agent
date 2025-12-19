@@ -32,3 +32,14 @@ logging:
   level: INFO
   file: ./agent/logs/agent.log
   max_size_mb: 100
+daemon:
+  enabled: false
+  check_interval: 3600
+  health_check_interval: 21600
+  resource_check_interval: 300
+  log_file: ./agent/logs/daemon.log
+  alerts:
+    enabled: true
+    critical_disk_threshold: 95
+    critical_memory_threshold: 90
+    critical_cpu_threshold: 90
