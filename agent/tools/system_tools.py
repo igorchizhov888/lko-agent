@@ -61,8 +61,8 @@ class SystemTools:
         return self._run_command("ps aux --sort=-%mem | head -20")
     
     def recent_errors(self):
-        """Get recent error logs"""
-        return self._run_command("journalctl -p err -n 50 --no-pager 2>/dev/null || tail -100 /var/log/syslog | grep -i error")
+        """Get recent error logs from current boot"""
+        return self._run_command("journalctl -b 0 -p err --no-pager 2>/dev/null || tail -100 /var/log/syslog | grep -i error")
 
 
 if __name__ == "__main__":
