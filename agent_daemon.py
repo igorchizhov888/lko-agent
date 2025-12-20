@@ -31,7 +31,7 @@ class AgentDaemon:
         self.executor = AgentExecutor(config_path)
         self.logger = IncidentLogger()
         self.resource_manager = ResourceManager(dry_run=False)
-        self.alerts = AlertSystem(config)
+        self.alerts = AlertSystem(self.config)
         self.log_rotation = LogRotation(max_size_mb=100, max_age_days=30)
         
         # Setup signal handlers for graceful shutdown
