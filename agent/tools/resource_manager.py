@@ -32,10 +32,22 @@ class ResourceManager:
         """Find processes consuming excessive resources"""
         hogs = []
         
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+        # First pass: initialize cpu_percent for all processes
+        for proc in psutil.process_iter(['pid', 'name']):
             try:
-                cpu = proc.info['cpu_percent']
-                mem = proc.info['memory_percent']
+                proc.cpu_percent(interval=0)
+            except:
+                pass
+        
+        # Wait a moment for measurements
+        import time
+        time.sleep(0.5)
+        
+        # Second pass: get actual CPU usage
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                cpu = proc.cpu_percent(interval=0)
+                mem = proc.memory_percent()
                 
                 if cpu > cpu_threshold or mem > memory_threshold:
                     info = self.get_process_info(proc.info['pid'])
