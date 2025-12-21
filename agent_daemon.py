@@ -89,6 +89,12 @@ class AgentDaemon:
                 print(f"  - PID {proc['pid']}: {proc['name']} - {', '.join(proc['reason'])}")
                 # Send alert for resource hog
                 self.alerts.alert_resource_hog(proc['pid'], proc['name'], ', '.join(proc['reason']))
+                
+                # Attempt smart remediation (renice -> graceful -> force)
+                print(f"[{self.timestamp()}] Attempting remediation for PID {proc['pid']}...")
+                remediation_results = self.resource_manager.smart_remediate(proc['pid'])
+                for result in remediation_results:
+                    print(f"[{self.timestamp()}]   {result['action']}: {result['message']}")
             
             # Log as incident
             query = f"High resource usage detected: {len(hogs)} processes"
