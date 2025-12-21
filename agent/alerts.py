@@ -51,9 +51,13 @@ class AlertSystem:
         """Send Ubuntu desktop notification"""
         try:
             urgency = "critical" if severity == "CRITICAL" else "normal"
+            # -t timeout in milliseconds (10000ms = 10 seconds)
+            # -i icon for better visibility
             subprocess.run([
                 "notify-send",
                 "-u", urgency,
+                "-t", "10000",
+                "-i", "dialog-warning" if severity == "WARNING" else "dialog-error",
                 f"LKO Agent: {title}",
                 message
             ], timeout=5)
