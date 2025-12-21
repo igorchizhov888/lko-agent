@@ -43,12 +43,12 @@ class AgentDaemon:
     def load_config(self):
         """Load daemon configuration"""
         with open(self.config_path) as f:
-            config = yaml.safe_load(f)
+            self.config = yaml.safe_load(f)
         
         # Daemon-specific config (we'll add this to config.yaml)
-        self.check_interval = config.get('daemon', {}).get('check_interval', 3600)  # 1 hour default
-        self.health_check_interval = config.get('daemon', {}).get('health_check_interval', 21600)  # 6 hours
-        self.resource_check_interval = config.get('daemon', {}).get('resource_check_interval', 300)  # 5 min
+        self.check_interval = self.config.get('daemon', {}).get('check_interval', 3600)  # 1 hour default
+        self.health_check_interval = self.config.get('daemon', {}).get('health_check_interval', 21600)  # 6 hours
+        self.resource_check_interval = self.config.get('daemon', {}).get('resource_check_interval', 300)  # 5 min
     
     def timestamp(self):
         """Current timestamp for logging"""
