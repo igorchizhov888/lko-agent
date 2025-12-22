@@ -79,9 +79,41 @@ class AgentDaemon:
         return results
     
     def check_resources(self):
-        """Check for resource hogs"""
+        """Check for resource hogs and system memory"""
         print(f"[{self.timestamp()}] Checking resource usage...")
         
+        # Check system-wide memory first
+        mem_status = self.resource_manager.check_system_memory(
+            critical_threshold=85,
+            warning_threshold=75,
+            min_available_gb=1.0
+        )
+        
+        if mem_status['critical']:
+            print(f"[{self.timestamp()}] CRITICAL: System memory issues")
+            for issue in mem_status['issues']:
+                print(f"  - {issue}")
+            self.alerts.send_alert(
+                "Critical Memory Usage",
+                f"System at {mem_status['percent']:.1f}%, {mem_status['available_gb']:.1f}GB available",
+                "CRITICAL"
+            )
+        elif mem_status['warning']:
+            print(f"[{self.timestamp()}] WARNING: High system memory")
+            for issue in mem_status['issues']:
+                print(f"  - {issue}")
+            self.alerts.send_alert(
+                "High Memory Usage",
+                f"System at {mem_status['percent']:.1f}%",
+                "WARNING"
+            )
+            self.alerts.send_alert(
+                "High Memory Usage",
+                f"System at {mem_status['percent']:.1f}%",
+                "WARNING"
+            )
+        
+        # Check individual processes
         hogs = self.resource_manager.find_resource_hogs(
             cpu_threshold=80,
             memory_threshold=50
@@ -91,16 +123,13 @@ class AgentDaemon:
             print(f"[{self.timestamp()}] WARNING: Found {len(hogs)} resource-intensive processes")
             for proc in hogs[:3]:
                 print(f"  - PID {proc['pid']}: {proc['name']} - {', '.join(proc['reason'])}")
-                # Send alert for resource hog
                 self.alerts.alert_resource_hog(proc['pid'], proc['name'], ', '.join(proc['reason']))
                 
-                # Attempt smart remediation (renice -> graceful -> force)
                 print(f"[{self.timestamp()}] Attempting remediation for PID {proc['pid']}...")
                 remediation_results = self.resource_manager.smart_remediate(proc['pid'])
                 for result in remediation_results:
                     print(f"[{self.timestamp()}]   {result['action']}: {result['message']}")
             
-            # Log as incident
             query = f"High resource usage detected: {len(hogs)} processes"
             plan = {"goal": "Resource monitoring", "tools": ["process_list"], "reasoning": "Autonomous check"}
             results = {"tools_executed": 1, "results": [{"tool": "resource_manager", "success": True}]}
@@ -108,9 +137,7 @@ class AgentDaemon:
                                    notes=f"Found {len(hogs)} resource hogs")
         else:
             print(f"[{self.timestamp()}] Resource usage normal")
-        
-        return hogs
-    
+
     def run(self):
         """Main daemon loop"""
         self.running = True

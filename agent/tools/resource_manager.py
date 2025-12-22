@@ -63,6 +63,43 @@ class ResourceManager:
         
         return sorted(hogs, key=lambda x: x['cpu_percent'] + x['memory_percent'], reverse=True)
     
+    def check_system_memory(self, critical_threshold=85, warning_threshold=75, min_available_gb=1.0):
+        """Check overall system memory usage"""
+        mem = psutil.virtual_memory()
+        
+        total_gb = mem.total / (1024**3)
+        used_gb = mem.used / (1024**3)
+        available_gb = mem.available / (1024**3)
+        percent = mem.percent
+        
+        status = {
+            'total_gb': total_gb,
+            'used_gb': used_gb,
+            'available_gb': available_gb,
+            'percent': percent,
+            'critical': False,
+            'warning': False,
+            'issues': []
+        }
+        
+        # Check critical threshold
+        if percent >= critical_threshold:
+            status['critical'] = True
+            status['issues'].append(f"System memory at {percent:.1f}% (critical threshold: {critical_threshold}%)")
+        
+        # Check warning threshold
+        elif percent >= warning_threshold:
+            status['warning'] = True
+            status['issues'].append(f"System memory at {percent:.1f}% (warning threshold: {warning_threshold}%)")
+        
+        # Check minimum available
+        if available_gb < min_available_gb:
+            if not status['critical']:
+                status['critical'] = True
+            status['issues'].append(f"Only {available_gb:.1f}GB available (minimum: {min_available_gb}GB)")
+        
+        return status
+    
     def renice_process(self, pid, new_nice=19):
         """Reduce process priority"""
         try:
