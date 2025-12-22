@@ -182,43 +182,179 @@ class DockerMonitor:
         return summary
 
 
+    def get_networks(self):
+        """Get all Docker networks"""
+        if not self.available:
+            return []
+        
+        try:
+            networks = self.client.networks.list()
+            network_info = []
+            
+            for net in networks:
+                try:
+                    # Safely get IPAM config
+                    ipam = net.attrs.get('IPAM', {})
+                    config = ipam.get('Config', [])
+                    subnet = config[0].get('Subnet', 'N/A') if config else 'N/A'
+                    
+                    network_info.append({
+                        'id': net.id[:12],
+                        'name': net.name,
+                        'driver': net.attrs.get('Driver', 'unknown'),
+                        'scope': net.attrs.get('Scope', 'unknown'),
+                        'containers': len(net.attrs.get('Containers', {})),
+                        'subnet': subnet
+                    })
+                except Exception as e:
+                    # Skip this network but continue with others
+                    print(f"Warning: Could not parse network {net.name}: {e}")
+                    continue
+            
+            return network_info
+        except Exception as e:
+            print(f"Error getting networks: {e}")
+            return []
+    
+    def get_network_containers(self, network_name):
+        """Get all containers on a specific network"""
+        if not self.available:
+            return []
+        
+        try:
+            network = self.client.networks.get(network_name)
+            containers_info = []
+            
+            for container_id, container_data in network.attrs['Containers'].items():
+                containers_info.append({
+                    'id': container_id[:12],
+                    'name': container_data['Name'],
+                    'ipv4': container_data.get('IPv4Address', 'N/A').split('/')[0],
+                    'ipv6': container_data.get('IPv6Address', 'N/A').split('/')[0] if container_data.get('IPv6Address') else None
+                })
+            
+            return containers_info
+        except:
+            return []
+    
+    def check_container_connectivity(self, source_container_name, target_container_name):
+        """Check if one container can reach another"""
+        if not self.available:
+            return {'success': False, 'error': 'Docker not available'}
+        
+        try:
+            source = self.client.containers.get(source_container_name)
+            
+            # Only works if source container is running
+            if source.status != 'running':
+                return {
+                    'success': False,
+                    'source': source_container_name,
+                    'target': target_container_name,
+                    'error': 'Source container not running'
+                }
+            
+            # Try to ping target container by name (Docker DNS)
+            result = source.exec_run(f"ping -c 2 -W 2 {target_container_name}")
+            
+            return {
+                'success': result.exit_code == 0,
+                'source': source_container_name,
+                'target': target_container_name,
+                'exit_code': result.exit_code,
+                'output': result.output.decode('utf-8') if result.output else ''
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'source': source_container_name,
+                'target': target_container_name,
+                'error': str(e)
+            }
+    
+    def check_network_health(self, network_name):
+        """Check overall health of a Docker network"""
+        if not self.available:
+            return {'healthy': False, 'error': 'Docker not available'}
+        
+        try:
+            network = self.client.networks.get(network_name)
+            containers = self.get_network_containers(network_name)
+            
+            # Check if network exists and has containers
+            health = {
+                'name': network_name,
+                'healthy': True,
+                'driver': network.attrs['Driver'],
+                'containers_count': len(containers),
+                'issues': []
+            }
+            
+            # Check for issues
+            if len(containers) == 0:
+                health['issues'].append('No containers on network')
+            
+            # Check if network is internal (no external connectivity)
+            if network.attrs.get('Internal', False):
+                health['issues'].append('Network is internal (no external access)')
+            
+            if health['issues']:
+                health['healthy'] = False
+            
+            return health
+            
+        except Exception as e:
+            return {
+                'name': network_name,
+                'healthy': False,
+                'error': str(e)
+            }
+    
+    def get_network_summary(self):
+        """Get comprehensive network summary"""
+        if not self.available:
+            return {'available': False}
+        
+        networks = self.get_networks()
+        
+        summary = {
+            'available': True,
+            'total_networks': len(networks),
+            'networks': []
+        }
+        
+        for net in networks:
+            net_detail = {
+                'name': net['name'],
+                'driver': net['driver'],
+                'containers': net['containers'],
+                'subnet': net['subnet']
+            }
+            
+            # Get containers on this network
+            if net['containers'] > 0:
+                net_detail['container_list'] = self.get_network_containers(net['name'])
+            
+            summary['networks'].append(net_detail)
+        
+        return summary
+
+
+
 if __name__ == "__main__":
-    # Test Docker monitoring
     print("Testing Docker Monitor...")
     
     monitor = DockerMonitor()
     
     if not monitor.is_available():
-        print("Docker is not available or not running")
+        print("Docker not available")
         exit(1)
     
-    print("\nDocker Summary:")
-    summary = monitor.get_summary()
-    print(f"  Total containers: {summary['total']}")
-    print(f"  Running: {summary['running']}")
-    print(f"  Stopped: {summary['stopped']}")
+    print("\nDocker Networks:")
+    summary = monitor.get_network_summary()
+    print(f"Total networks: {summary['total_networks']}")
     
-    if summary['containers']:
-        print("\nContainers:")
-        for c in summary['containers']:
-            print(f"  - {c['name']} ({c['image']}): {c['status']}")
+    for net in summary['networks']:
+        print(f"  {net['name']}: {net['containers']} containers")
     
-    print("\nChecking for resource hogs...")
-    hogs = monitor.find_resource_hogs(cpu_threshold=50, memory_threshold=50)
-    if hogs:
-        print(f"Found {len(hogs)} resource-intensive containers:")
-        for h in hogs:
-            print(f"  - {h['name']}: {', '.join(h['reasons'])}")
-    else:
-        print("No resource hogs detected")
-    
-    print("\nChecking for unhealthy containers...")
-    issues = monitor.find_unhealthy_containers()
-    if issues:
-        print(f"Found {len(issues)} containers with issues:")
-        for i in issues:
-            print(f"  - {i['name']}: {', '.join(i['problems'])}")
-    else:
-        print("All containers healthy")
-    
-    print("\nDocker monitor test complete!")
+    print("\nTest complete!")

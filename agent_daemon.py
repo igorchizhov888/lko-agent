@@ -16,6 +16,7 @@ from agent.tools.resource_manager import ResourceManager
 from agent.alerts import AlertSystem
 from agent.log_rotation import LogRotation
 from agent.tools.docker_monitor import DockerMonitor
+from agent.tools.network_monitor import NetworkMonitor
 import yaml
 
 
@@ -35,6 +36,7 @@ class AgentDaemon:
         self.alerts = AlertSystem(self.config)
         self.log_rotation = LogRotation(max_size_mb=100, max_age_days=30)
         self.docker_monitor = DockerMonitor()
+        self.network_monitor = NetworkMonitor()
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self.handle_shutdown)
