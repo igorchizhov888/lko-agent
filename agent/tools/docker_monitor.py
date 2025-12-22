@@ -193,6 +193,9 @@ class DockerMonitor:
             
             for net in networks:
                 try:
+                    # Reload network to get fresh data
+                    net.reload()
+                    
                     # Safely get IPAM config
                     ipam = net.attrs.get('IPAM', {})
                     config = ipam.get('Config', [])
