@@ -17,6 +17,7 @@ from agent.alerts import AlertSystem
 from agent.log_rotation import LogRotation
 from agent.tools.docker_monitor import DockerMonitor
 from agent.tools.network_monitor import NetworkMonitor
+from agent.runbooks.engine import RunbookEngine
 import yaml
 
 
@@ -37,6 +38,7 @@ class AgentDaemon:
         self.log_rotation = LogRotation(max_size_mb=100, max_age_days=30)
         self.docker_monitor = DockerMonitor()
         self.network_monitor = NetworkMonitor()
+        self.runbook_engine = RunbookEngine()
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self.handle_shutdown)
@@ -137,6 +139,20 @@ class AgentDaemon:
                                    notes=f"Found {len(hogs)} resource hogs")
         else:
             print(f"[{self.timestamp()}] Resource usage normal")
+        
+        # Check and execute matching runbooks
+        context = {
+            'memory_usage': mem_status['percent'],
+            'disk_usage': []  # Will add disk context when available
+        }
+        
+        matching_runbooks = self.runbook_engine.find_matching_runbooks(context)
+        if matching_runbooks:
+            print(f"[{self.timestamp()}] Found {len(matching_runbooks)} matching runbooks")
+            for runbook in matching_runbooks:
+                print(f"[{self.timestamp()}] Executing runbook: {runbook['name']}")
+                result = self.runbook_engine.execute_runbook(runbook, context, dry_run=False)
+                print(f"[{self.timestamp()}] Runbook {runbook['name']} completed")
 
     def run(self):
         """Main daemon loop"""

@@ -1,0 +1,52 @@
+# Custom Runbooks - Automated Response Procedures
+
+runbooks:
+  - name: "high-disk-home-cleanup"
+    description: "Clean up /home when disk usage exceeds 90%"
+    enabled: true
+    trigger:
+      type: "disk_usage"
+      filesystem: "/home"
+      threshold: 90
+      operator: ">"
+    actions:
+      - type: "alert"
+        severity: "WARNING"
+        message: "High disk usage detected on /home, initiating cleanup"
+      
+      - type: "command"
+        description: "Remove old tmp files"
+        run: "find /tmp -type f -atime +7 -delete"
+        timeout: 60
+      
+      - type: "wait"
+        seconds: 5
+      
+      - type: "check"
+        tool: "disk_usage"
+        description: "Verify cleanup worked"
+      
+      - type: "alert"
+        severity: "INFO"
+        message: "Cleanup procedure completed"
+
+  - name: "memory-pressure-analysis"
+    description: "Collect diagnostics when memory is critical"
+    enabled: true
+    trigger:
+      type: "memory_usage"
+      threshold: 85
+      operator: ">="
+    actions:
+      - type: "alert"
+        severity: "CRITICAL"
+        message: "Critical memory pressure detected"
+      
+      - type: "command"
+        description: "Capture top memory consumers"
+        run: "ps aux --sort=-%mem | head -20 > /tmp/memory-report-$(date +%Y%m%d-%H%M%S).txt"
+        timeout: 10
+      
+      - type: "check"
+        tool: "memory_status"
+        description: "Record current memory state"
