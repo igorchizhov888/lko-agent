@@ -1,0 +1,12 @@
+# GitHub Pages Jekyll Configuration
+title: LKO Agent
+description: Local Knowledge & Operations Assistant - Autonomous AI-powered system monitoring
+theme: jekyll-theme-minimal
+
+# Plugins
+plugins:
+  - jekyll-readme-index
+
+# Use README.md as index
+readme_index:
+  enabled: true
